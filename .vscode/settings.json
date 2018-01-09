@@ -1,0 +1,9 @@
+{
+    "terminal.integrated.env.linux": {
+        "PATH": "/home/erow/.platformio/penv/bin:/opt/ros/kinetic/bin:/home/erow/Public/gcloud/google-cloud-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+    },
+    "files.associations": {
+        "array": "cpp",
+        "initializer_list": "cpp"
+    }
+}

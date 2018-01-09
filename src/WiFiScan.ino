@@ -10,17 +10,23 @@
 #include "FS.h"
 
 int led_pin=LED_BUILTIN;
+
 StaticJsonBuffer<200> jsonBuffer;
-JsonObject conf(&jsonBuffer);
 std::unique_ptr<char[]> buf;
+JsonVariant root = jsonBuffer.createObject();
 bool loadConfig() {
   File file = SPIFFS.open("/config.json", "r");
   if (!file) {
     Serial.println("Failed to open config file");
     return false;
   }
+  int size=file.size();
   buf=std::unique_ptr<char[]> (new char[size]);
   file.readBytes(buf.get(),size);
+  root = jsonBuffer.parseObject(buf.get());
+
+  root.prettyPrintTo(Serial);
+  Serial.println();
 }
 
 bool saveConfig() {
@@ -29,7 +35,7 @@ bool saveConfig() {
     Serial.println("Failed to open config file for writing");
     return false;
   }
-  conf.printTo(configFile);
+  root.printTo(configFile);
   return true;
 }
 
@@ -53,32 +59,47 @@ void initOTA(){
 }
 void setup() {
   Serial.begin(115200);
-
-  if (!config.success()) {
-    Serial.println("Failed to parse config file");
-    return false;
-  }
+  Serial.printf("start esp\n");
+  Serial.println("Mounting FS...");
   
-
-  WiFi.begin("AAAAAA", "85810967");
-
-  Serial.print("Connecting");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.print(".");
-    delay(50);
+  if (!SPIFFS.begin()) {
+    Serial.println("Failed to mount file system");
+    return;
   }
-  Serial.println();
+  loadConfig();
+  Serial.printf_P("suc:%d,ssid:%d\n",root.success(),
+  root.asObject().containsKey("ssid"));
+  if(root.success()&&
+  root.asObject().containsKey("ssid")){
+    //JsonObject& conf=root.asObject();
+    WiFi.begin(root["ssid"].asString(),root["key"].asString());
+    Serial.print("Connecting");
+    int c=0;
+    while (WiFi.status() != WL_CONNECTED)
+    {
+      Serial.print(".");
+      delay(500);
+      c++;
+      if(c>200)
+      {
+        root=jsonBuffer.createObject();
+        ESP.reset();
+      }
+    }
+    Serial.println();
+    Serial.print("Connected, IP address: ");
+    Serial.println(WiFi.localIP());
 
-  Serial.print("Connected, IP address: ");
-  Serial.println(WiFi.localIP());
-
+  }else{
+    WiFi.softAP("ESP","12345678");
+    Serial.println("create ap esp-12345678");
+  }
   initOTA();
 }
 
 void loop() {
   ArduinoOTA.handle();
 
-  digitalWrite(led_pin,!digitalRead(led_pin));
-  ESP.deepSleep(5e4);
+  //digitalWrite(led_pin,!digitalRead(led_pin));
+  //ESP.deepSleep(5e4);
 }
